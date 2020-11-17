@@ -39,7 +39,7 @@ def csv_reader(csv):
 		totalsample += int(poll[6])
 		biden_mean += int(poll[6])*int(poll[9])
 		trump_mean += int(poll[6])*int(poll[10])
-		
+		biden_std = 0
 	biden_mean = round(biden_mean/totalsample,1)
 	trump_mean = round(trump_mean/totalsample,1)
 	print(biden_mean,trump_mean,totalsample)
