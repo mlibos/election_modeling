@@ -32,17 +32,34 @@ def csv_reader(csv):
 	for poll in csv:
 		if poll[0] == state:
 			polls.append(poll)
-	biden_mean = 0
-	trump_mean = 0
-	totalsample = 0
+	biden_mean = []
+	trump_mean = []
+	totalsample = [0,[]]
+
+	#equation for combined_std = sqrt((txx-tx2/tn) / (tn-1)) where tn = total n tx = sum of mean*n txx = sum of tx^2
 	for poll in polls:
-		totalsample += int(poll[6])
-		biden_mean += int(poll[6])*int(poll[9])
-		trump_mean += int(poll[6])*int(poll[10])
-		biden_std = 0
-	biden_mean = round(biden_mean/totalsample,1)
-	trump_mean = round(trump_mean/totalsample,1)
+		n = int(poll[6])
+		biden = int(poll[9])/100
+		trump = int(poll[10])/100
+		totalsample[0] += n
+		totalsample[1].append(n)
+		biden_mean.append(biden)
+		trump_mean.append(trump)
+	biden_tx = 0
+	biden_txx = 0
+	for index,mean in enumerate(biden_mean):
+		biden_tx += mean*totalsample[1][index]
+		biden_txx += (mean*totalsample[1][index])**2
+	trump_tx = 0
+	trump_txx = 0
+	for index,mean in enumerate(trump_mean):
+		trump_tx += mean*totalsample[1][index]
+		trump_txx += (mean*totalsample[1][index])**2
+	biden_std = ((biden_txx-biden_tx**2/totalsample[0])/(totalsample[0]-1))**0.5
+	trump_std = ((trump_txx-trump_tx**2/totalsample[0])/(totalsample[0]-1))**0.5	
+
 	print(biden_mean,trump_mean,totalsample)
+	print(biden_std,trump_std)
 
 
 
