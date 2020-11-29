@@ -1,5 +1,6 @@
 import os
 import csv
+import scipy.stats as st
 from pathlib import Path 
 from zipfile import ZipFile 
 
@@ -56,7 +57,7 @@ def interval_calc(polls):
 		trump_interval[i] = round(trump_interval[i]/totalsample[0],3)
 	biden_interval.insert(1,biden_weighted_mean)
 	trump_interval.insert(1,trump_weighted_mean)
-	intervals = [biden_interval,trump_interval]
+	intervals = [biden_interval,trump_interval,totalsample[0]]
 	return intervals
 
 def csv_reader(filename):
@@ -78,11 +79,41 @@ def csv_reader(filename):
 	state_intervals['NATIONAL'] = state_intervals['--']
 	del state_intervals['--']
 	return state_intervals
+
 for file in data_files:
 	if '2020 US' in file:
 		filename = file
 
-
 state_intervals = csv_reader(filename)
 for state in state_intervals:
 	print(state,state_intervals[state])
+
+def calc_prob(biden_mean,trump_mean,n):
+	#difference is always expressed as biden-trump (pos = biden lead, neg = trump lead)
+	difference = biden_mean-trump_mean
+	std_dev = (biden_mean*(1-biden_mean)/n+trump_mean*(1-trump_mean)/n)**0.5
+	z_score = -difference/std_dev
+	p_value = st.norm.sf(abs(z_score))
+	return(p_value)
+
+def state_probabilities(state_intervals):
+	#uses difference of trump biden proportions to calculate z-score of when the underdog wins the race, giving race probabilities.
+	states = ["NATIONAL","AL", "AK", "AZ", "AR", "CA", "CO", "CT", "DC", "DE", "FL", "GA", "HI", "ID", "IL", "IN", "IA", "KS", "KY", "LA", "ME", "MD", "MA", "MI", "MN", "MS", "MO", "MT", "NE", "NV", "NH", "NJ", "NM", "NY", "NC", "ND", "OH", "OK", "OR", "PA", "RI", "SC", "SD", "TN", "TX", "UT", "VT", "VA", "WA", "WV", "WI", "WY"]
+	state_probabilities = {}
+	for state in states:
+		if state_intervals[state] == None:
+			pass
+		else:
+			biden_mean = state_intervals[state][0][1]
+			trump_mean = state_intervals[state][1][1]
+			n = state_intervals[state][2]
+			p_value = calc_prob(biden_mean,trump_mean,n)
+			state_probabilities[state] = p_value
+	return state_probabilities
+probs = state_probabilities(state_intervals)
+for prob in probs:
+	print(prob,probs[prob])
+
+
+
+	
