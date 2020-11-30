@@ -2,6 +2,9 @@ import os
 import csv
 from pathlib import Path 
 from zipfile import ZipFile 
+import scipy.stats
+import math
+
 
 data_files = []
 #list out data files in data folder to find one to open
@@ -59,9 +62,13 @@ def interval_calc(polls):
 	for i in range(2):
 		biden_interval[i] = round(biden_interval[i],3)
 		trump_interval[i] = round(trump_interval[i],3)
+	biden_SE = round(biden_SE,3)
+	trump_SE = round(trump_SE,3)
 	biden_interval.insert(1,biden_weighted_mean)
 	trump_interval.insert(1,trump_weighted_mean)
-	intervals = [biden_interval,trump_interval,totalsample[0],len(totalsample[1])]
+	biden_interval.append(biden_SE)
+	trump_interval.append(trump_SE)
+	intervals = [biden_interval,trump_interval,totalsample[0]]
 	return intervals
 
 def csv_reader(filename):
@@ -92,10 +99,15 @@ state_intervals = csv_reader(filename)
 for state in state_intervals:
 	print(state,state_intervals[state])
 
-def calc_prob(biden_mean,trump_mean,n):
+def calc_prob(biden_mean,biden_SE,trump_mean,trump_SE,n):
 	#difference is always expressed as biden-trump (pos = biden lead, neg = trump lead)
-	difference = biden_mean-trump_mean
-	return(z_score)
+	#first we calculate c which is the intersection point of the two curves
+	if biden_SE == trump_SE:
+		pass
+	else:
+		c = (trump_mean*biden_SE**2-(biden_mean*trump_SE+biden_SE*((biden_mean-trump_mean)**2+2*(biden_SE**2-trump_SE**2)*(math.log(biden_SE/trump_SE,10)))))/(biden_SE**2-trump_SE**2)
+		print(biden_mean,trump_mean,c)
+	
 
 def state_probabilities(state_intervals):
 	#uses difference of trump biden proportions to calculate z-score of when the underdog wins the race, giving race probabilities.
@@ -106,15 +118,36 @@ def state_probabilities(state_intervals):
 			pass
 		else:
 			biden_mean = state_intervals[state][0][1]
+			biden_SE = state_intervals[state][0][3]
 			trump_mean = state_intervals[state][1][1]
+			trump_SE = state_intervals[state][1][3]
 			n = state_intervals[state][2]
-			p_value = calc_prob(biden_mean,trump_mean,n)
+			p_value = calc_prob(biden_mean,biden_SE,trump_mean,trump_SE,n)
 			state_probabilities[state] = p_value
 	return state_probabilities
-# probs = state_probabilities(state_intervals)
-# for prob in probs:
-# 	print(prob,probs[prob])
+probs = state_probabilities(state_intervals)
+for prob in probs:
+	print(prob,probs[prob])
+# scipy.stats.norm(loc=100, scale=12)
+# #where loc is the mean and scale is the std dev
+# #if you wish to pull out a random number from your distribution
+# scipy.stats.norm.rvs(loc=100, scale=12)
 
+# #To find the probability that the variable has a value LESS than or equal
+# #let's say 113, you'd use CDF cumulative Density Function
+# scipy.stats.norm.cdf(113,100,12)
+# Output: 0.86066975255037792
+# #or 86.07% probability
 
+# #To find the probability that the variable has a value GREATER than or
+# #equal to let's say 125, you'd use SF Survival Function 
+# scipy.stats.norm.sf(125,100,12)
+# Output: 0.018610425189886332
+# #or 1.86%
 
-	
+# #To find the variate for which the probability is given, let's say the 
+# #value which needed to provide a 98% probability, you'd use the 
+# #PPF Percent Point Function
+# scipy.stats.norm.ppf(.98,100,12)
+# Output: 124.64498692758187
+
