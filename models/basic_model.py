@@ -1,6 +1,5 @@
 import os
 import csv
-import scipy.stats as st
 from pathlib import Path 
 from zipfile import ZipFile 
 
@@ -18,9 +17,13 @@ def find_polls(csvfile,state):
 	polls = []
 	for poll in csvfile:
 		if poll[0] == state:
-			polls.append(poll)
+			if len(polls) < 7:
+				polls.append(poll)
 	return (polls)
-
+def std_dev(proportion,n):
+	#finds std_dev of a single poll using variance = np(1-p)
+	std_dev = (n*proportion*(1-proportion))**0.5
+	return std_dev
 def interval_calc(polls):
 	#takes a list of polls and computes a 95% confidence interval of vote shares
 	biden_mean = []
@@ -45,19 +48,20 @@ def interval_calc(polls):
 	biden_weighted_mean = round(biden_weighted_mean/totalsample[0],3)
 	trump_weighted_mean = round(trump_weighted_mean/totalsample[0],3)
 	#calculating variance and std_dev
-	biden_variance = round(totalsample[0]*biden_weighted_mean*(1-biden_weighted_mean),2)
-	trump_variance = round(totalsample[0]*trump_weighted_mean*(1-trump_weighted_mean),2)
-	biden_std_dev = round(biden_variance**0.5,2)
-	trump_std_dev = round(trump_variance**0.5,2)
+	n_term = 0
+	for n in totalsample[1]:
+		n_term += (1/n)
+	biden_SE = (biden_weighted_mean*(1-biden_weighted_mean)*n_term)**0.5
+	trump_SE = (trump_weighted_mean*(1-trump_weighted_mean)*n_term)**0.5
 	#taking std_dev and calculating a 95% confidence interval
-	biden_interval = [biden_weighted_mean*totalsample[0]-biden_std_dev*1.92,biden_weighted_mean*totalsample[0]+biden_std_dev*1.92]
-	trump_interval = [trump_weighted_mean*totalsample[0]-trump_std_dev*1.92,trump_weighted_mean*totalsample[0]+trump_std_dev*1.92]
+	biden_interval = [biden_weighted_mean-biden_SE*1.645,biden_weighted_mean+biden_SE*1.645]
+	trump_interval = [trump_weighted_mean-trump_SE*1.645,trump_weighted_mean+trump_SE*1.645]
 	for i in range(2):
-		biden_interval[i] = round(biden_interval[i]/totalsample[0],3)
-		trump_interval[i] = round(trump_interval[i]/totalsample[0],3)
+		biden_interval[i] = round(biden_interval[i],3)
+		trump_interval[i] = round(trump_interval[i],3)
 	biden_interval.insert(1,biden_weighted_mean)
 	trump_interval.insert(1,trump_weighted_mean)
-	intervals = [biden_interval,trump_interval,totalsample[0]]
+	intervals = [biden_interval,trump_interval,totalsample[0],len(totalsample[1])]
 	return intervals
 
 def csv_reader(filename):
@@ -91,10 +95,7 @@ for state in state_intervals:
 def calc_prob(biden_mean,trump_mean,n):
 	#difference is always expressed as biden-trump (pos = biden lead, neg = trump lead)
 	difference = biden_mean-trump_mean
-	std_dev = (biden_mean*(1-biden_mean)/n+trump_mean*(1-trump_mean)/n)**0.5
-	z_score = -difference/std_dev
-	p_value = st.norm.sf(abs(z_score))
-	return(p_value)
+	return(z_score)
 
 def state_probabilities(state_intervals):
 	#uses difference of trump biden proportions to calculate z-score of when the underdog wins the race, giving race probabilities.
@@ -110,9 +111,9 @@ def state_probabilities(state_intervals):
 			p_value = calc_prob(biden_mean,trump_mean,n)
 			state_probabilities[state] = p_value
 	return state_probabilities
-probs = state_probabilities(state_intervals)
-for prob in probs:
-	print(prob,probs[prob])
+# probs = state_probabilities(state_intervals)
+# for prob in probs:
+# 	print(prob,probs[prob])
 
 
 
