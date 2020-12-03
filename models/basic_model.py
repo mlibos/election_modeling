@@ -4,6 +4,7 @@ from pathlib import Path
 from zipfile import ZipFile 
 import scipy.stats
 import math
+import random
 
 
 data_files = []
@@ -62,8 +63,8 @@ def interval_calc(polls):
 	for i in range(2):
 		biden_interval[i] = round(biden_interval[i],3)
 		trump_interval[i] = round(trump_interval[i],3)
-	biden_SE = round(biden_SE,3)
-	trump_SE = round(trump_SE,3)
+	biden_SE = round(biden_SE,5)
+	trump_SE = round(trump_SE,5)
 	biden_interval.insert(1,biden_weighted_mean)
 	trump_interval.insert(1,trump_weighted_mean)
 	biden_interval.append(biden_SE)
@@ -96,23 +97,40 @@ for file in data_files:
 		filename = file
 
 state_intervals = csv_reader(filename)
-for state in state_intervals:
-	print(state,state_intervals[state])
+# for state in state_intervals:
+# 	print(state,state_intervals[state])
 
 def calc_prob(biden_mean,biden_SE,trump_mean,trump_SE,n):
-	#difference is always expressed as biden-trump (pos = biden lead, neg = trump lead)
 	#first we calculate c which is the intersection point of the two curves
+	# which results in the parabolic equation ax^2 + bx + c == 0 where
+	# a = 1/(2*sigma1^2) - 1/(2*sigma2^2);
+	# b = mu2/(sigma2^2) - mu1/(sigma1^2);
+	# c = mu1^2/(2*sigma1^2) - mu2^2/(2*sigma2^2) - log(sigma2/sigma1)
+	# D = b^2 - 4 * a * c;
+	# x1 = (-b + sqrt(D))/(2*a);
+	# x2 = (-b - sqrt(D))/(2*a);
 	if biden_SE == trump_SE:
-		pass
+		return('same SE')
+	a = 1/(2*biden_SE**2) - 1/(2*trump_SE**2)
+	b = trump_mean/(trump_SE**2)-biden_mean/(biden_SE**2)
+	c = biden_mean**2/(2*biden_SE**2) - trump_mean**2/(2*trump_SE**2) - math.log(trump_SE/biden_SE)
+	D = b**2-4*a*c
+	x1 = (-b+D**0.5)/(2*a)
+	x2 = (-b-D**0.5)/(2*a)
+	#one root is positive and the intersection we want, the other is negative and useless
+	if x1> x2:
+		intersection = x1
 	else:
-		c = (trump_mean*biden_SE**2-(biden_mean*trump_SE+biden_SE*((biden_mean-trump_mean)**2+2*(biden_SE**2-trump_SE**2)*(math.log(biden_SE/trump_SE,10)))))/(biden_SE**2-trump_SE**2)
-		print(biden_mean,trump_mean,c)
-	
+		intersection = x2
+	#pvalue will be expressed in terms of biden win
+	p_value = round(scipy.stats.norm.sf(intersection,biden_mean,biden_SE),4)
+	return p_value
+
 
 def state_probabilities(state_intervals):
 	#uses difference of trump biden proportions to calculate z-score of when the underdog wins the race, giving race probabilities.
 	states = ["NATIONAL","AL", "AK", "AZ", "AR", "CA", "CO", "CT", "DC", "DE", "FL", "GA", "HI", "ID", "IL", "IN", "IA", "KS", "KY", "LA", "ME", "MD", "MA", "MI", "MN", "MS", "MO", "MT", "NE", "NV", "NH", "NJ", "NM", "NY", "NC", "ND", "OH", "OK", "OR", "PA", "RI", "SC", "SD", "TN", "TX", "UT", "VT", "VA", "WA", "WV", "WI", "WY"]
-	state_probabilities = {}
+	state_probs= {}
 	for state in states:
 		if state_intervals[state] == None:
 			pass
@@ -123,31 +141,58 @@ def state_probabilities(state_intervals):
 			trump_SE = state_intervals[state][1][3]
 			n = state_intervals[state][2]
 			p_value = calc_prob(biden_mean,biden_SE,trump_mean,trump_SE,n)
-			state_probabilities[state] = p_value
-	return state_probabilities
+			state_probs[state] = p_value
+	return state_probs
 probs = state_probabilities(state_intervals)
 for prob in probs:
 	print(prob,probs[prob])
-# scipy.stats.norm(loc=100, scale=12)
-# #where loc is the mean and scale is the std dev
-# #if you wish to pull out a random number from your distribution
-# scipy.stats.norm.rvs(loc=100, scale=12)
 
-# #To find the probability that the variable has a value LESS than or equal
-# #let's say 113, you'd use CDF cumulative Density Function
-# scipy.stats.norm.cdf(113,100,12)
-# Output: 0.86066975255037792
-# #or 86.07% probability
 
-# #To find the probability that the variable has a value GREATER than or
-# #equal to let's say 125, you'd use SF Survival Function 
-# scipy.stats.norm.sf(125,100,12)
-# Output: 0.018610425189886332
-# #or 1.86%
+def electoral_calculations_simple(state_probabilities):
+	#uses state probabilities to calculate electoral college results
+	#first I will implement a simple model that just gives expected values for each state instead of running simulations over a large N times
+	states = {"AL":9,"AK":3, "AZ":11, "AR":6, "CA":55, "CO":9, "CT":7, "DC":3, "DE":3, "FL":29, "GA":16, "HI":4, "ID":4, "IL":20, "IN":11, "IA":6, "KS":6, "KY":8, "LA":8, "ME":4, "MD":10, "MA":11, "MI":16, "MN":10, "MS":6, "MO":10, "MT":3, "NE":5, "NV":6, "NH":4, "NJ":14, "NM":5, "NY":29, "NC":15, "ND":3, "OH":18, "OK":7, "OR":7, "PA":20, "RI":4, "SC":9, "SD":3, "TN":11, "TX":38, "UT":6, "VT":3, "VA":13, "WA":12,"WV":5, "WI":10,"WY":3}
+	biden_votes = 0
+	trump_votes = 0
+	for state in state_probabilities:
+		if state == 'NATIONAL':
+			pass
+		else:
+			biden_votes += state_probabilities[state]*states[state]
+			trump_votes += (1-state_probabilities[state])*states[state]
+	biden_votes = round(biden_votes,1)
+	trump_votes = round(trump_votes,1)
+	return(biden_votes,trump_votes)
+def electoral_calculations_simulation(state_probabilities,n):
+	#runs n simulations of election outcome using calculated probabilities.
+	states = {"AL":9,"AK":3, "AZ":11, "AR":6, "CA":55, "CO":9, "CT":7, "DC":3, "DE":3, "FL":29, "GA":16, "HI":4, "ID":4, "IL":20, "IN":11, "IA":6, "KS":6, "KY":8, "LA":8, "ME":4, "MD":10, "MA":11, "MI":16, "MN":10, "MS":6, "MO":10, "MT":3, "NE":5, "NV":6, "NH":4, "NJ":14, "NM":5, "NY":29, "NC":15, "ND":3, "OH":18, "OK":7, "OR":7, "PA":20, "RI":4, "SC":9, "SD":3, "TN":11, "TX":38, "UT":6, "VT":3, "VA":13, "WA":12,"WV":5, "WI":10,"WY":3}
+	biden_wins = 0
+	trump_wins = 0
+	ties = 0
+	for simulation in range(n):
+		biden_votes = 0
+		trump_votes = 0
+		for state in state_probabilities:
+			value = random.random()
+			if state == "NATIONAL":
+				pass
+			elif value < state_probabilities[state]:
+				biden_votes += states[state]
+			else:
+				trump_votes += states[state]
+		if biden_votes > trump_votes:
+			biden_wins +=1
+		elif biden_votes < trump_votes:
+			trump_wins +=1
+		else:
+			ties +=1
+	biden_prob = round(biden_wins/n,4)
+	trump_prob = round(trump_wins/n,4)
+	tie_prob = round(ties/n,4)
+	return('Biden probability: ',biden_prob, 'Trump probability: ',trump_prob, "Tie probability: ", tie_prob, 'n = ',n)
 
-# #To find the variate for which the probability is given, let's say the 
-# #value which needed to provide a 98% probability, you'd use the 
-# #PPF Percent Point Function
-# scipy.stats.norm.ppf(.98,100,12)
-# Output: 124.64498692758187
 
+
+
+print(electoral_calculations_simple(probs))
+print(electoral_calculations_simulation(probs,40000))
