@@ -106,10 +106,6 @@ for file in data_files:
 	if '2020 US' in file:
 		filename = file
 
-state_intervals = csv_reader(filename)
-# for state in state_intervals:
-# 	print(state,state_intervals[state])
-
 def calc_prob(biden_mean,biden_SE,trump_mean,trump_SE,n):
 	#first we calculate c which is the intersection point of the two curves
 	# which results in the parabolic equation ax^2 + bx + c == 0 where
@@ -153,10 +149,6 @@ def state_probabilities(state_intervals):
 			p_value = calc_prob(biden_mean,biden_SE,trump_mean,trump_SE,n)
 			state_probs[state] = p_value
 	return state_probs
-probs = state_probabilities(state_intervals)
-# for prob in probs:
-# 	print(prob,probs[prob])
-
 
 def electoral_calculations_simple(state_probabilities):
 	#uses state probabilities to calculate electoral college results
@@ -204,8 +196,12 @@ def electoral_calculations_simulation(state_probabilities,n):
 	return('Biden probability: ',biden_prob, 'Trump probability: ',trump_prob, "Tie probability: ", tie_prob, 'n = ',n)
 
 
-
-
+state_intervals = csv_reader(filename)
+for state in state_intervals:
+	print(state,state_intervals[state])
+probs = state_probabilities(state_intervals)
+for prob in probs:
+	print(prob,probs[prob])
 print(electoral_calculations_simulation(probs,40000))
 end = time.time()
 print('time to run: ',end-start)
