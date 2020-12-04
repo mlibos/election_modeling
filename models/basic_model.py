@@ -138,8 +138,12 @@ def state_probabilities(state_intervals):
 	states = ["NATIONAL","AL", "AK", "AZ", "AR", "CA", "CO", "CT", "DC", "DE", "FL", "GA", "HI", "ID", "IL", "IN", "IA", "KS", "KY", "LA", "ME", "MD", "MA", "MI", "MN", "MS", "MO", "MT", "NE", "NV", "NH", "NJ", "NM", "NY", "NC", "ND", "OH", "OK", "OR", "PA", "RI", "SC", "SD", "TN", "TX", "UT", "VT", "VA", "WA", "WV", "WI", "WY"]
 	state_probs= {}
 	for state in states:
-		if state_intervals[state] == None:
-			pass
+		if state == "DC":
+			state_probs[state] = 1
+		elif state == "NE":
+			state_probs[state] = 0.15
+		elif state == "RI":
+			state_probs[state] = 1
 		else:
 			biden_mean = state_intervals[state][0][1]
 			biden_SE = state_intervals[state][0][3]
@@ -165,6 +169,7 @@ def electoral_calculations_simple(state_probabilities):
 	biden_votes = round(biden_votes,1)
 	trump_votes = round(trump_votes,1)
 	return(biden_votes,trump_votes)
+
 def electoral_calculations_simulation(state_probabilities,n):
 	#runs n simulations of election outcome using calculated probabilities.
 	states = {"AL":9,"AK":3, "AZ":11, "AR":6, "CA":55, "CO":9, "CT":7, "DC":3, "DE":3, "FL":29, "GA":16, "HI":4, "ID":4, "IL":20, "IN":11, "IA":6, "KS":6, "KY":8, "LA":8, "ME":4, "MD":10, "MA":11, "MI":16, "MN":10, "MS":6, "MO":10, "MT":3, "NE":5, "NV":6, "NH":4, "NJ":14, "NM":5, "NY":29, "NC":15, "ND":3, "OH":18, "OK":7, "OR":7, "PA":20, "RI":4, "SC":9, "SD":3, "TN":11, "TX":38, "UT":6, "VT":3, "VA":13, "WA":12,"WV":5, "WI":10,"WY":3}
@@ -196,12 +201,10 @@ def electoral_calculations_simulation(state_probabilities,n):
 	return('Biden probability: ',biden_prob, 'Trump probability: ',trump_prob, "Tie probability: ", tie_prob, 'n = ',n)
 
 
-state_intervals = csv_reader(filename)
-for state in state_intervals:
-	print(state,state_intervals[state])
-probs = state_probabilities(state_intervals)
-for prob in probs:
-	print(prob,probs[prob])
-print(electoral_calculations_simulation(probs,40000))
-end = time.time()
-print('time to run: ',end-start)
+# state_intervals = csv_reader(filename)
+# for state in state_intervals:
+# 	print(state,state_intervals[state])
+# probs = state_probabilities(state_intervals)
+# for prob in probs:
+# 	print(prob,probs[prob])
+# print(electoral_calculations_simulation(probs,40000))
