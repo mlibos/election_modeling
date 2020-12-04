@@ -5,7 +5,9 @@ from zipfile import ZipFile
 import scipy.stats
 import math
 import random
+import time
 
+start = time.time()
 
 data_files = []
 #list out data files in data folder to find one to open
@@ -49,8 +51,16 @@ def interval_calc(polls):
 		biden_weighted_mean += biden_mean[index]*totalsample[1][index]
 	for index,mean in enumerate(trump_mean):
 		trump_weighted_mean += trump_mean[index]*totalsample[1][index]
-	biden_weighted_mean = round(biden_weighted_mean/totalsample[0],3)
-	trump_weighted_mean = round(trump_weighted_mean/totalsample[0],3)
+	#here I do some math MUMBO JUMBO bc I haven't implemented a more nuanced version of accounting for undecided voter share. I assume no more than 2% of votes go to 3rd parties so I split undecided vote 40/60 to each candidate until their combined vote share is 98% b/c of trump polling error
+	biden_weighted_mean = (biden_weighted_mean/totalsample[0])
+	trump_weighted_mean = (trump_weighted_mean/totalsample[0])
+	if biden_weighted_mean + trump_weighted_mean < 0.98:
+		undecided = 0.98 - trump_weighted_mean - biden_weighted_mean
+		biden_weighted_mean += undecided*(0.3)
+		trump_weighted_mean += undecided*(0.7)
+	biden_weighted_mean = round(biden_weighted_mean,3)
+	trump_weighted_mean = round(trump_weighted_mean,3)
+
 	#calculating variance and std_dev
 	n_term = 0
 	for n in totalsample[1]:
@@ -144,8 +154,8 @@ def state_probabilities(state_intervals):
 			state_probs[state] = p_value
 	return state_probs
 probs = state_probabilities(state_intervals)
-for prob in probs:
-	print(prob,probs[prob])
+# for prob in probs:
+# 	print(prob,probs[prob])
 
 
 def electoral_calculations_simple(state_probabilities):
@@ -173,7 +183,9 @@ def electoral_calculations_simulation(state_probabilities,n):
 		biden_votes = 0
 		trump_votes = 0
 		for state in state_probabilities:
-			value = random.random()
+			#polling error for trump
+			error = random.uniform(0.0,0.07)
+			value = random.random() + error
 			if state == "NATIONAL":
 				pass
 			elif value < state_probabilities[state]:
@@ -194,5 +206,6 @@ def electoral_calculations_simulation(state_probabilities,n):
 
 
 
-print(electoral_calculations_simple(probs))
 print(electoral_calculations_simulation(probs,40000))
+end = time.time()
+print('time to run: ',end-start)
