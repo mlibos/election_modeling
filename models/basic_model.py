@@ -11,9 +11,9 @@ start = time.time()
 
 data_files = []
 #list out data files in data folder to find one to open
-entries = Path('C:/Users/SEDan/Documents/election_modeling/data/')
+entries = Path('C:/Users/SEDan/Documents/github/election_modeling/data/')
 for entry in entries.iterdir():
-	file = 'C:/Users/SEDan/Documents/election_modeling/data/' + entry.name
+	file = 'C:/Users/SEDan/Documents/github/election_modeling/data/' + entry.name
 	data_files.append(file)
 
 
@@ -201,10 +201,10 @@ def electoral_calculations_simulation(state_probabilities,n):
 	return('Biden probability: ',biden_prob, 'Trump probability: ',trump_prob, "Tie probability: ", tie_prob, 'n = ',n)
 
 
-# state_intervals = csv_reader(filename)
-# for state in state_intervals:
-# 	print(state,state_intervals[state])
-# probs = state_probabilities(state_intervals)
-# for prob in probs:
-# 	print(prob,probs[prob])
-# print(electoral_calculations_simulation(probs,40000))
+state_intervals = csv_reader(filename)
+for state in state_intervals:
+	print(state,state_intervals[state])
+probs = state_probabilities(state_intervals)
+for prob in probs:
+	print(prob,probs[prob])
+print(electoral_calculations_simulation(probs,40000))
